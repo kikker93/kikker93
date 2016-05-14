@@ -1,0 +1,55 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+$script = <<SCRIPT
+    apt-get update
+    apt-get -y install mc
+    apt-get -y install php5-fpm
+    apt-get -y install php5-cli php5-common php5-mysql php5-cgi php5-mcrypt php5-mbstring
+    apt-get -y install nginx
+
+    sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' /etc/php5/fpm/php.ini
+
+    debconf-set-selections <<< 'mysql-server mysql-server/root_password password vagrant'
+    debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password vagrant'
+    apt-get -y install mysql-server
+
+    debconf-set-selections <<< 'phpmyadmin phpmyadmin/dbconfig-install boolean false'
+    debconf-set-selections <<< 'phpmyadmin phpmyadmin/reconfigure-webserver multiselect'
+    debconf-set-selections <<< 'phpmyadmin phpmyadmin/app-password-confirm password vagrant'
+    debconf-set-selections <<< 'phpmyadmin phpmyadmin/mysql/admin-pass password vagrant'
+    debconf-set-selections <<< 'phpmyadmin phpmyadmin/password-confirm password vagrant'
+	debconf-set-selections <<< 'phpmyadmin phpmyadmin/setup-password password vagrant' 
+	debconf-set-selections <<< 'phpmyadmin phpmyadmin/database-type select mysql' 
+	debconf-set-selections <<< 'phpmyadmin phpmyadmin/mysql/app-pass password vagrant' 
+	debconf-set-selections <<< 'dbconfig-common dbconfig-common/mysql/app-pass password vagrant'
+	debconf-set-selections <<< 'dbconfig-common dbconfig-common/mysql/app-pass password' 
+	debconf-set-selections <<< 'dbconfig-common dbconfig-common/password-confirm password vagrant' 
+	debconf-set-selections <<< 'dbconfig-common dbconfig-common/app-password-confirm password vagrant' 
+	debconf-set-selections <<< 'dbconfig-common dbconfig-common/app-password-confirm password vagrant' 
+	debconf-set-selections <<< 'dbconfig-common dbconfig-common/password-confirm password vagrant' 
+    apt-get -y install phpmyadmin
+
+    locale-gen ru_RU.UTF-8
+    dpkg-reconfigure locales
+
+    mv default /etc/nginx/sites-available/default
+    service nginx restart
+SCRIPT
+
+Vagrant.configure("2") do |config|
+
+    config.vm.box = "ubuntu/trusty64"
+    config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+    config.vm.network "private_network", ip: "192.168.100.220"
+
+    config.vm.synced_folder "code/", "/home/vagrant"
+    config.vm.synced_folder ".", "/vagrant", disabled: true
+
+    config.vm.provider "virtualbox" do |v|
+      v.name = "epixx2"
+    end
+
+    # provisioner config
+    config.vm.provision "file", source: "./.settings/default", destination: "default"
+    config.vm.provision "shell", inline: $script
+end
